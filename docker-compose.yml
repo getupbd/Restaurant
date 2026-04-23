@@ -1,0 +1,48 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "${APP_PORT:-8000}:80"
+    volumes:
+      - .:/var/www/html
+      - ./storage:/var/www/html/storage
+    environment:
+      - APP_ENV=local
+      - APP_DEBUG=true
+    depends_on:
+      - mysql
+      - redis
+    networks:
+      - antigravity
+
+  mysql:
+    image: mysql:8.0
+    ports:
+      - "${FORWARD_DB_PORT:-3306}:3306"
+    environment:
+      - MYSQL_DATABASE=${DB_DATABASE:-restaurant_management}
+      - MYSQL_ROOT_PASSWORD=${DB_PASSWORD:-password}
+      - MYSQL_ALLOW_EMPTY_PASSWORD='yes'
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - antigravity
+
+  redis:
+    image: redis:alpine
+    ports:
+      - "${FORWARD_REDIS_PORT:-6379}:6379"
+    networks:
+      - antigravity
+
+networks:
+  antigravity:
+    driver: bridge
+
+volumes:
+  mysql_data:
+    driver: local
