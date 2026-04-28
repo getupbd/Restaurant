@@ -8,7 +8,7 @@ class Product extends Model
 {
     protected $fillable = [
         'category_id', 'kitchen_id',
-        'name', 'slug', 'code', 'description', 'notes',
+        'name', 'slug', 'code', 'barcode', 'description', 'notes',
         'price', 'image',
         'storage_unit', 'conversion_qty',
         'is_stock_validate', 'without_production', 'add_as_ingredient',

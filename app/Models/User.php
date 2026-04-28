@@ -12,14 +12,20 @@ use Illuminate\Notifications\Notifiable;
 
 class User extends Authenticatable
 {
-    /** @use HasFactory<UserFactory> */
-    use HasFactory, Notifiable;
+    use HasFactory, Notifiable, \Spatie\Permission\Traits\HasRoles;
 
     protected $fillable = [
         'name',
         'email',
         'password',
+        'branch_id',
+        'role',
     ];
+
+    public function branch()
+    {
+        return $this->belongsTo(Branch::class);
+    }
 
     protected $hidden = [
         'password',

@@ -44,7 +44,7 @@
                     @endphp
                     <div 
                         wire:click="addToCart({{ $product->id }})"
-                        class="bg-white dark:bg-gray-800 p-4 rounded-2xl shadow-sm hover:shadow-md transition-all cursor-pointer border-2 border-transparent active:border-primary-500 overflow-hidden group"
+                        class="bg-white dark:bg-gray-800 p-4 rounded-2xl shadow-sm hover:shadow-md transition-all cursor-pointer border-2 border-transparent active:border-primary-500 overflow-hidden group flex flex-col justify-between"
                     >
                         <div style="aspect-ratio: 1;" class="bg-gray-100 dark:bg-gray-700 rounded-2xl mb-3 overflow-hidden">
                             @if($imageSrc)
@@ -55,8 +55,10 @@
                                 </div>
                             @endif
                         </div>
-                        <h3 class="font-bold text-gray-800 dark:text-gray-200 line-clamp-1">{{ $product->name }}</h3>
-                        <p class="text-primary-600 font-bold mt-1">${{ number_format($product->price, 2) }}</p>
+                        <div>
+                            <h3 class="font-bold text-gray-800 dark:text-gray-200 line-clamp-1">{{ $product->name }}</h3>
+                            <p class="text-primary-600 font-bold mt-1">${{ number_format($product->price, 2) }}</p>
+                        </div>
                     </div>
                 @endforeach
             </div>
@@ -64,17 +66,34 @@
 
         <!-- Right Side: Cart & Checkout -->
         <div style="width: 28rem; backdrop-filter: blur(16px); background: rgba(255, 255, 255, 0.9);" class="shrink-0 dark:bg-gray-900/90 rounded-3xl shadow-2xl border border-gray-100 dark:border-gray-800 flex flex-col overflow-hidden">
-            <div class="p-6 border-b border-gray-50 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-800/50">
-                <h2 class="text-xl font-black text-gray-900 dark:text-white flex items-center gap-2">
-                    <x-heroicon-s-shopping-bag class="w-6 h-6 text-primary-600" />
-                    Current Order
-                </h2>
-                <div class="mt-4">
-                    <x-filament::input.wrapper label="Table">
-                        <select wire:model="tableId" class="block w-full border-none bg-transparent focus:ring-0 text-sm">
+            <div class="p-4 border-b border-gray-50 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-800/50 flex flex-col gap-3">
+                <div class="flex justify-between items-center">
+                    <h2 class="text-xl font-black text-gray-900 dark:text-white flex items-center gap-2">
+                        <x-heroicon-s-shopping-bag class="w-6 h-6 text-primary-600" />
+                        Current Order
+                    </h2>
+                    @if(count($cart) > 0)
+                        <button wire:click="clearCart" class="text-sm text-danger-500 hover:text-danger-700 font-medium flex items-center gap-1">
+                            <x-heroicon-o-trash class="w-4 h-4"/> Clear
+                        </button>
+                    @endif
+                </div>
+                
+                <div class="grid grid-cols-2 gap-3">
+                    <x-filament::input.wrapper>
+                        <select wire:model="tableId" class="block w-full border-none bg-transparent focus:ring-0 text-sm py-1.5">
                             <option value="">Select Table / Takeout</option>
                             @foreach($this->tables as $table)
-                                <option value="{{ $table->id }}">{{ $table->name }} ({{ $table->area->name }})</option>
+                                <option value="{{ $table->id }}">{{ $table->name }}</option>
+                            @endforeach
+                        </select>
+                    </x-filament::input.wrapper>
+
+                    <x-filament::input.wrapper>
+                        <select wire:model="customerId" class="block w-full border-none bg-transparent focus:ring-0 text-sm py-1.5">
+                            <option value="">Walk-in Customer</option>
+                            @foreach($this->customers as $customer)
+                                <option value="{{ $customer->id }}">{{ $customer->name }}</option>
                             @endforeach
                         </select>
                     </x-filament::input.wrapper>
@@ -105,15 +124,45 @@
                 @endforelse
             </div>
 
-            <div class="p-6 bg-gray-900 dark:bg-black text-white rounded-t-[40px] shadow-2xl">
-                <div class="flex justify-between items-center mb-6 px-2">
-                    <span class="text-gray-400 font-medium">Total Payable</span>
+            <div class="p-5 bg-gray-900 dark:bg-black text-white rounded-t-[40px] shadow-2xl flex flex-col gap-3">
+                <div class="flex flex-col gap-2 border-b border-gray-800 pb-3">
+                    <div class="flex justify-between items-center text-sm">
+                        <span class="text-gray-400">Subtotal</span>
+                        <span class="font-bold">${{ number_format($this->subtotal, 2) }}</span>
+                    </div>
+                    <div class="flex justify-between items-center text-sm">
+                        <span class="text-gray-400 flex items-center gap-2">
+                            Discount
+                            <input type="number" wire:model.live.debounce.500ms="discount" class="w-16 px-1 py-0.5 text-xs text-black rounded bg-gray-200 border-none focus:ring-1 focus:ring-primary-500" step="0.01" min="0">
+                        </span>
+                        <span class="font-bold text-danger-400">-${{ number_format($this->discount, 2) }}</span>
+                    </div>
+                    <div class="flex justify-between items-center text-sm">
+                        <span class="text-gray-400">Tax ({{ $taxRate }}%)</span>
+                        <span class="font-bold">${{ number_format($this->taxAmount, 2) }}</span>
+                    </div>
+                </div>
+
+                <div class="flex justify-between items-center px-2">
+                    <span class="text-gray-300 font-medium">Total Payable</span>
                     <span class="text-3xl font-black text-white">${{ number_format($this->total, 2) }}</span>
                 </div>
+                
+                <div class="grid grid-cols-2 gap-3 mt-2">
+                    <div class="flex items-center bg-gray-800 rounded-xl px-3 py-2 border border-gray-700 focus-within:border-primary-500">
+                        <span class="text-gray-400 mr-2">$</span>
+                        <input type="number" wire:model.live.debounce.500ms="amountPaid" placeholder="Cash Paid" class="bg-transparent border-none w-full text-white p-0 focus:ring-0 text-sm">
+                    </div>
+                    <div class="flex items-center justify-between bg-gray-800 rounded-xl px-3 py-2 border border-gray-700 text-sm">
+                        <span class="text-gray-400">Change</span>
+                        <span class="font-bold text-success-500">${{ number_format(max(0, $amountPaid - $this->total), 2) }}</span>
+                    </div>
+                </div>
+
                 <x-filament::button 
                     size="xl" 
                     color="primary" 
-                    class="w-full text-lg py-4 shadow-xl shadow-primary-500/20"
+                    class="w-full text-lg py-4 shadow-xl shadow-primary-500/20 mt-2"
                     wire:click="checkout"
                     wire:loading.attr="disabled"
                 >

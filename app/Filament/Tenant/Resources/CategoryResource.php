@@ -38,7 +38,7 @@ class CategoryResource extends Resource
                     ->placeholder('heroicon-o-shopping-cart'),
                 Forms\Components\FileUpload::make('image')
                     ->image()
-                    ->directory('categories')
+                    ->directory(fn () => 'tenants/' . tenant('id') . '/categories')
                     ->imageEditor(),
             ])->columns(2),
 

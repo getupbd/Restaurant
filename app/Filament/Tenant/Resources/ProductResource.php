@@ -49,6 +49,10 @@ class ProductResource extends Resource
                 Forms\Components\TextInput::make('code')
                     ->label('Food Code')
                     ->placeholder('e.g. BURGER-001'),
+                Forms\Components\TextInput::make('barcode')
+                    ->label('Barcode')
+                    ->placeholder('e.g. 8901234567')
+                    ->hidden(fn (\Filament\Forms\Get $get) => count($get('variants') ?? []) > 0),
                 Forms\Components\TextInput::make('price')
                     ->numeric()
                     ->prefix('৳')
@@ -61,26 +65,101 @@ class ProductResource extends Resource
                     ->rows(3),
                 Forms\Components\FileUpload::make('image')
                     ->image()
-                    ->directory('products')
+                    ->directory(fn () => 'tenants/' . tenant('id') . '/products')
                     ->imageEditor()
                     ->columnSpanFull(),
             ])->columns(2),
 
+            Forms\Components\Section::make('Generate Variants Matrix')->schema([
+                Forms\Components\Select::make('selected_variant_options')
+                    ->multiple()
+                    ->options(function () {
+                        return \App\Models\VariantOption::with('variantType')->get()->groupBy('variantType.name')->map->pluck('name', 'id');
+                    })
+                    ->label('Select Options to Auto-Generate Combinations')
+                    ->live()
+                    ->afterStateUpdated(function (Set $set, \Filament\Forms\Get $get, $state) {
+                        if (!$state || count($state) === 0) return;
+                        
+                        $options = \App\Models\VariantOption::whereIn('id', $state)->get()->groupBy('variant_type_id');
+                        
+                        $combinations = [[]];
+                        foreach ($options as $typeId => $typeOptions) {
+                            $append = [];
+                            foreach ($combinations as $product) {
+                                foreach ($typeOptions as $option) {
+                                    $append[] = $product + [$option->id => $option];
+                                }
+                            }
+                            $combinations = $append;
+                        }
+                        
+                        $newVariants = [];
+                        $baseCode = $get('code') ? $get('code') . '-' : 'VAR-';
+                        
+                        foreach ($combinations as $combo) {
+                            $skuParts = [];
+                            foreach ($combo as $opt) {
+                                $skuParts[] = strtoupper(substr($opt->name, 0, 3));
+                            }
+                            $skuSuffix = implode('-', $skuParts);
+                            
+                            $newVariants[] = [
+                                'options' => array_keys($combo),
+                                'sku' => $baseCode . $skuSuffix,
+                                'price' => $get('price') ?? 0,
+                                'stock_quantity' => 0,
+                                'is_active' => true,
+                            ];
+                        }
+                        
+                        $set('variants', $newVariants);
+                    }),
+            ]),
+
             Forms\Components\Section::make('Variants (Sizes/Portions)')->schema([
                 Forms\Components\Repeater::make('variants')
                     ->relationship()
+                    ->live()
                     ->schema([
-                        Forms\Components\Select::make('variant_id')
-                            ->label('Variant')
-                            ->options(Variant::where('is_active', true)->pluck('name', 'id'))
-                            ->required(),
+                        Forms\Components\Select::make('options')
+                            ->relationship('options', 'name')
+                            ->multiple()
+                            ->preload()
+                            ->searchable()
+                            ->getOptionLabelFromRecordUsing(fn ($record) => $record->variantType->name . ': ' . $record->name)
+                            ->required()
+                            ->columnSpanFull()
+                            ->label('Options Combination (e.g. Small + Red)'),
+                        Forms\Components\TextInput::make('sku')
+                            ->label('SKU Code')
+                            ->placeholder('e.g. ITEM-SM-RED'),
+                        Forms\Components\TextInput::make('barcode')
+                            ->label('Barcode')
+                            ->placeholder('e.g. 890123...'),
                         Forms\Components\TextInput::make('price')
                             ->numeric()
                             ->prefix('৳')
                             ->required(),
-                        Forms\Components\Toggle::make('is_active')->default(true),
+                        Forms\Components\TextInput::make('stock_quantity')
+                            ->numeric()
+                            ->default(0)
+                            ->label('Stock'),
+                        Forms\Components\TextInput::make('offer_rate')
+                            ->numeric()
+                            ->suffix('%')
+                            ->label('Offer %'),
+                        Forms\Components\DatePicker::make('offer_start_date')
+                            ->label('Offer Start'),
+                        Forms\Components\DatePicker::make('offer_end_date')
+                            ->label('Offer End'),
+                        Forms\Components\Toggle::make('is_stock_validate')
+                            ->label('Check Stock')
+                            ->default(false),
+                        Forms\Components\Toggle::make('is_active')
+                            ->default(true),
                     ])
-                    ->columns(3)
+                    ->columns(4)
                     ->addActionLabel('Add Variant')
                     ->defaultItems(0),
             ]),
@@ -100,8 +179,17 @@ class ProductResource extends Resource
                     ->label('Conversion Qty')
                     ->numeric()
                     ->placeholder('e.g. 4 (1 kg = 4 portions)'),
+                Forms\Components\Toggle::make('track_stock')
+                    ->label('Track Stock In/Out')
+                    ->hidden(fn (\Filament\Forms\Get $get) => count($get('variants') ?? []) > 0),
+                Forms\Components\TextInput::make('stock_quantity')
+                    ->label('Stock Quantity')
+                    ->numeric()
+                    ->default(0)
+                    ->hidden(fn (\Filament\Forms\Get $get) => count($get('variants') ?? []) > 0),
                 Forms\Components\Toggle::make('is_stock_validate')
-                    ->label('Validate Stock Before Sale'),
+                    ->label('Validate Stock Before Sale')
+                    ->hidden(fn (\Filament\Forms\Get $get) => count($get('variants') ?? []) > 0),
                 Forms\Components\Toggle::make('without_production')
                     ->label('Without Production'),
                 Forms\Components\Toggle::make('add_as_ingredient')
@@ -112,11 +200,15 @@ class ProductResource extends Resource
                 Forms\Components\TextInput::make('offer_rate')
                     ->numeric()
                     ->suffix('%')
-                    ->label('Offer Rate'),
-                Forms\Components\DatePicker::make('offer_start_date')->label('Offer Start'),
+                    ->label('Offer Rate')
+                    ->hidden(fn (\Filament\Forms\Get $get) => count($get('variants') ?? []) > 0),
+                Forms\Components\DatePicker::make('offer_start_date')
+                    ->label('Offer Start')
+                    ->hidden(fn (\Filament\Forms\Get $get) => count($get('variants') ?? []) > 0),
                 Forms\Components\DatePicker::make('offer_end_date')
                     ->label('Offer End')
-                    ->afterOrEqual('offer_start_date'),
+                    ->afterOrEqual('offer_start_date')
+                    ->hidden(fn (\Filament\Forms\Get $get) => count($get('variants') ?? []) > 0),
                 Forms\Components\TextInput::make('vat_rate')
                     ->numeric()
                     ->suffix('%')
@@ -144,17 +236,36 @@ class ProductResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\ImageColumn::make('image')->circular(),
-                Tables\Columns\TextColumn::make('code')->label('Code')->placeholder('—'),
-                Tables\Columns\TextColumn::make('name')->searchable()->sortable(),
-                Tables\Columns\TextColumn::make('category.name')->label('Category')->badge(),
-                Tables\Columns\TextColumn::make('kitchen.name')->label('Kitchen')->placeholder('—'),
-                Tables\Columns\TextColumn::make('price')->money('BDT')->sortable(),
-                Tables\Columns\TextColumn::make('vat_rate')->suffix('%')->label('VAT'),
-                Tables\Columns\IconColumn::make('is_special')->boolean()->label('Special'),
-                Tables\Columns\IconColumn::make('is_visible_on_web')->boolean()->label('Web'),
-                Tables\Columns\IconColumn::make('is_active')->boolean()->label('Active'),
-                Tables\Columns\TextColumn::make('position')->sortable()->label('Order'),
+                Tables\Columns\ImageColumn::make('image')
+                    ->circular()
+                    ->size(48),
+                Tables\Columns\TextColumn::make('name')
+                    ->searchable()
+                    ->sortable()
+                    ->description(fn ($record) => $record->category?->name)
+                    ->weight('bold'),
+                Tables\Columns\TextColumn::make('code')
+                    ->label('Code')
+                    ->placeholder('—')
+                    ->badge()
+                    ->color('gray'),
+                Tables\Columns\TextColumn::make('price')
+                    ->money('BDT')
+                    ->sortable()
+                    ->weight('bold'),
+                Tables\Columns\TextColumn::make('vat_rate')
+                    ->suffix('%')
+                    ->label('VAT')
+                    ->placeholder('0%'),
+                Tables\Columns\TextColumn::make('variants_count')
+                    ->counts('variants')
+                    ->label('Variants')
+                    ->badge()
+                    ->color(fn ($state) => $state > 0 ? 'primary' : 'gray'),
+                Tables\Columns\ToggleColumn::make('is_special')->label('Special'),
+                Tables\Columns\ToggleColumn::make('is_visible_on_web')->label('Web'),
+                Tables\Columns\ToggleColumn::make('track_stock')->label('Stock Track'),
+                Tables\Columns\ToggleColumn::make('is_active')->label('Active'),
             ])
             ->defaultSort('position')
             ->reorderable('position')
@@ -170,6 +281,15 @@ class ProductResource extends Resource
                 Tables\Filters\TernaryFilter::make('is_visible_on_web')->label('On Web'),
             ])
             ->actions([
+                Tables\Actions\Action::make('view_variants')
+                    ->label('Variants')
+                    ->icon('heroicon-o-swatch')
+                    ->color('info')
+                    ->modalHeading(fn ($record) => $record->name . ' — Variants')
+                    ->modalContent(fn ($record) => view('filament.tables.columns.product-variants', ['getRecord' => fn() => $record]))
+                    ->modalSubmitAction(false)
+                    ->modalCancelActionLabel('Close')
+                    ->visible(fn ($record) => $record->variants_count > 0 || $record->variants()->count() > 0),
                 Tables\Actions\EditAction::make(),
                 Tables\Actions\DeleteAction::make(),
             ])

@@ -27,6 +27,7 @@ class AdminPanelProvider extends PanelProvider
             ->id('admin')
             ->path('super-admin')
             ->login()
+            ->maxContentWidth(\Filament\Support\Enums\MaxWidth::Full)
             ->font('Outfit')
             ->brandName('Antigravity Central')
             ->colors([

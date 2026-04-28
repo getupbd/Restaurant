@@ -27,6 +27,12 @@ class TenantPanelProvider extends PanelProvider
             ->id('tenant')
             ->path('admin')
             ->login()
+            ->profile()
+            ->sidebarCollapsibleOnDesktop()
+            ->sidebarWidth('16rem')
+            ->collapsedSidebarWidth('3.5rem')
+            ->breadcrumbs(false)
+            ->maxContentWidth(\Filament\Support\Enums\MaxWidth::Full)
             ->font('Outfit')
             ->brandName('Antigravity Restaurant')
             ->colors([
@@ -36,12 +42,14 @@ class TenantPanelProvider extends PanelProvider
             ->discoverResources(in: app_path('Filament/Tenant/Resources'), for: 'App\\Filament\\Tenant\\Resources')
             ->discoverPages(in: app_path('Filament/Tenant/Pages'), for: 'App\\Filament\\Tenant\\Pages')
             ->pages([
-                Pages\Dashboard::class,
+                \App\Filament\Tenant\Pages\Dashboard::class,
             ])
             ->discoverWidgets(in: app_path('Filament/Tenant/Widgets'), for: 'App\\Filament\\Tenant\\Widgets')
             ->widgets([
                 Widgets\AccountWidget::class,
-                Widgets\FilamentInfoWidget::class,
+            ])
+            ->plugins([
+                \BezhanSalleh\FilamentShield\FilamentShieldPlugin::make(),
             ])
             ->navigationItems([
                 NavigationItem::make('Pending Orders')
@@ -64,6 +72,7 @@ class TenantPanelProvider extends PanelProvider
                 \Stancl\Tenancy\Middleware\InitializeTenancyByDomain::class,
                 \Stancl\Tenancy\Middleware\PreventAccessFromCentralDomains::class,
                 \App\Http\Middleware\CheckTenantSubscription::class,
+                \App\Http\Middleware\ApplyTenantSettings::class,
                 EncryptCookies::class,
                 AddQueuedCookiesToResponse::class,
                 StartSession::class,
@@ -76,6 +85,47 @@ class TenantPanelProvider extends PanelProvider
             ])
             ->authMiddleware([
                 Authenticate::class,
-            ]);
+            ])
+            ->renderHook(
+                \Filament\View\PanelsRenderHook::SIDEBAR_NAV_START,
+                fn (): string => \Illuminate\Support\Facades\Blade::render('@include("filament.tenant.sidebar-search")')
+            )
+            ->renderHook(
+                \Filament\View\PanelsRenderHook::TOPBAR_START,
+                fn (): string => '<div id="topbar-page-info" class="flex items-center gap-2 px-4 flex-1">
+                    <div id="topbar-title" class="font-semibold text-gray-800 dark:text-white text-sm"></div>
+                    <div id="topbar-actions-portal" class="flex items-center gap-2 ml-auto mr-2"></div>
+                </div>'
+            )
+            ->renderHook(
+                \Filament\View\PanelsRenderHook::BODY_END,
+                fn (): string => '<script>
+                    function movePageInfoToTopbar() {
+                        var titleEl = document.getElementById("topbar-title");
+                        var actionsPortal = document.getElementById("topbar-actions-portal");
+                        if (!titleEl) return;
+
+                        // Correct Filament v3 selectors
+                        var h1      = document.querySelector(".fi-header-heading");
+                        var actions = document.querySelector(".fi-header .fi-ac");
+                        var header  = document.querySelector(".fi-header");
+
+                        // 1. Move actions to topbar FIRST (before hiding header)
+                        if (actionsPortal && actions) {
+                            actionsPortal.innerHTML = "";
+                            actionsPortal.appendChild(actions);
+                        }
+
+                        // 2. Set title text
+                        if (h1) titleEl.textContent = h1.textContent.trim();
+
+                        // 3. Now hide the page header
+                        if (header) header.style.display = "none";
+                    }
+                    document.addEventListener("DOMContentLoaded", movePageInfoToTopbar);
+                    document.addEventListener("livewire:navigated", function() { setTimeout(movePageInfoToTopbar, 60); });
+                    document.addEventListener("livewire:navigate",   function() { setTimeout(movePageInfoToTopbar, 110); });
+                </script>'
+            );
     }
 }

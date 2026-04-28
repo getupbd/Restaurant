@@ -1,215 +1,481 @@
 <x-filament-panels::page>
 
-    <style>
-        .noscrollbar::-webkit-scrollbar { display: none; }
-        .noscrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+<style>
+/* Hide page title header on this page */
+.fi-header { display: none !important; }
 
-        .kds-card { transition: transform 0.3s ease, box-shadow 0.3s ease; }
-        .kds-card:hover { transform: translateY(-4px); }
+/* KDS Light Theme */
+.kds-root {
+    min-height: calc(100vh - 60px);
+    background: transparent;
+    padding: 0;
+    margin: 0;
+    font-family: 'Outfit', sans-serif;
+}
 
-        /* Urgency pulse for orders > 15 min */
-        @keyframes urgency-pulse {
-            0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
-            50% { box-shadow: 0 0 0 8px rgba(239, 68, 68, 0); }
-        }
-        .urgent { animation: urgency-pulse 2s infinite; border-color: #ef4444 !important; }
+/* Stats Bar */
+.kds-stats-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 0.75rem 1.25rem;
+    margin-bottom: 1.25rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+.kds-stat-chip {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    font-size: 0.8rem;
+    font-weight: 700;
+}
+.kds-stat-dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+.kds-stat-val {
+    font-size: 1.25rem;
+    font-weight: 900;
+    line-height: 1;
+}
+.kds-live {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #64748b;
+}
+.kds-live-dot {
+    width: 8px; height: 8px;
+    background: #22c55e;
+    border-radius: 50%;
+    animation: blink 1.5s ease-in-out infinite;
+}
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
 
-        .kds-badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 5px;
-            padding: 4px 12px;
-            border-radius: 999px;
-            font-size: 11px;
-            font-weight: 700;
-            letter-spacing: 0.05em;
-            text-transform: uppercase;
-        }
-        .kds-badge-pending { background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
-        .kds-badge-cooking { background: #fef3c7; color: #92400e; border: 1px solid #fde68a; }
-        .kds-badge-ready   { background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
+/* Columns */
+.kds-columns {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+    align-items: start;
+}
+.kds-col-header {
+    border-radius: 10px;
+    padding: 0.6rem 1rem;
+    margin-bottom: 0.875rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border: 1px solid;
+}
+.kds-col-title {
+    font-size: 0.75rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+}
+.kds-count-badge {
+    min-width: 24px;
+    height: 24px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8rem;
+    font-weight: 900;
+    padding: 0 6px;
+}
 
-        .kds-item-row {
-            background: #f8fafc;
-            border: 1px solid #f1f5f9;
-            transition: background 0.2s;
-        }
-        .kds-item-row:hover {
-            background: #f1f5f9;
-        }
-    </style>
+/* Cards */
+.kds-card {
+    border-radius: 14px;
+    border: 1px solid;
+    overflow: hidden;
+    margin-bottom: 1rem;
+    transition: transform 0.2s, box-shadow 0.2s;
+    background: #ffffff;
+}
+.kds-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.10);
+}
+.kds-card-header {
+    padding: 0.875rem 1.1rem;
+    border-bottom: 1px solid;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+}
+.kds-order-num {
+    font-size: 1.5rem;
+    font-weight: 900;
+    letter-spacing: -0.04em;
+    line-height: 1;
+}
+.kds-table-label {
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-top: 3px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+.kds-timer {
+    text-align: right;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 6px 10px;
+    min-width: 56px;
+}
+.kds-timer-val {
+    font-size: 1.1rem;
+    font-weight: 900;
+    line-height: 1;
+}
+.kds-timer-label {
+    font-size: 0.6rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #94a3b8;
+    margin-top: 2px;
+}
 
-    <div wire:poll.8s id="kds-board"
-         style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1.5rem;">
+/* Items */
+.kds-items {
+    padding: 0.75rem 1.1rem;
+    background: #ffffff;
+}
+.kds-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.6rem 0;
+    border-bottom: 1px solid #f1f5f9;
+}
+.kds-item:last-child { border-bottom: none; }
+.kds-qty {
+    width: 30px; height: 30px;
+    border-radius: 7px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.9rem; font-weight: 900;
+    flex-shrink: 0;
+}
+.kds-item-name {
+    flex: 1;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #1e293b;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.kds-notes-bar {
+    margin: 0 1.1rem 0.75rem;
+    padding: 0.5rem 0.75rem;
+    border-radius: 6px;
+    border-left: 3px solid #f59e0b;
+    background: #fffbeb;
+    font-size: 0.75rem;
+    color: #92400e;
+    font-style: italic;
+}
 
-        @forelse($this->getOrders() as $order)
-            @php
-                $isUrgent  = $order->elapsed_minutes >= 15 && $order->status === 'pending';
-                $isPending = $order->status === 'pending';
-                $isCooking = $order->status === 'cooking';
-                $isReady   = $order->status === 'ready';
+/* Action Button */
+.kds-action-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    width: 100%;
+    padding: 0.8rem;
+    border: none;
+    border-radius: 0 0 13px 13px;
+    font-size: 0.75rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    cursor: pointer;
+    transition: filter 0.15s, transform 0.15s;
+}
+.kds-action-btn:hover { filter: brightness(1.1); transform: translateY(-1px); }
+.kds-action-btn:active { transform: translateY(0); }
 
-                // Header color per status - subtle light backgrounds
-                $headerColor = $isPending ? '#fef2f2' : ($isCooking ? '#fffbeb' : '#f0fdf4');
-                $accentColor = $isPending ? '#dc2626' : ($isCooking ? '#d97706' : '#16a34a');
-                $tableLabel = $order->table?->name ?? 'Walk-in';
-            @endphp
+/* Urgency animation */
+@keyframes urgency-pulse {
+    0%,100% { box-shadow: 0 0 0 0 rgba(239,68,68,0.4); }
+    50%      { box-shadow: 0 0 0 6px rgba(239,68,68,0); }
+}
+.kds-urgent { animation: urgency-pulse 1.8s infinite; }
 
-            <div class="kds-card {{ $isUrgent ? 'urgent' : '' }}"
-                 x-data="{ show: false }"
-                 x-init="setTimeout(() => show = true, 50)"
-                 x-show="show"
-                 x-transition:enter="transition ease-out duration-400"
-                 x-transition:enter-start="opacity-0 scale-95 translate-y-4"
-                 x-transition:enter-end="opacity-100 scale-100 translate-y-0"
-                 style="background: #ffffff; border-radius: 1.25rem; overflow: hidden;
-                        box-shadow: 0 4px 20px -2px rgba(0,0,0,0.05), 0 2px 10px -3px rgba(0,0,0,0.03);
-                        border: 1px solid #e2e8f0;
-                        display: flex; flex-direction: column; min-height: 380px;">
+/* Empty */
+.kds-empty {
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    min-height: 200px;
+    background: #f8fafc;
+    border: 1px dashed #cbd5e1;
+    border-radius: 12px;
+    color: #94a3b8;
+    font-size: 0.8rem;
+    font-weight: 600;
+    gap: 0.5rem;
+    text-align: center;
+}
 
-                {{-- ── HEADER ──────────────────────────────────────────── --}}
-                <div style="background: {{ $headerColor }}; padding: 1.25rem; border-bottom: 1px solid #e2e8f0; display:flex; justify-content:space-between; align-items:flex-start;">
-                    <div>
-                        <div style="display:flex; align-items:center; gap:0.75rem; margin-bottom:0.4rem;">
-                            <span style="font-size:1.85rem; font-weight:900; letter-spacing:-0.05em; line-height:1; color: #1e293b;">
-                                #{{ $order->id }}
-                            </span>
-                            <span class="kds-badge kds-badge-{{ $order->status }}">
-                                @if($isPending) ⏱️ @elseif($isCooking) 👨‍🍳 @else ✅ @endif
-                                {{ ucfirst($order->status) }}
-                            </span>
-                        </div>
-                        <div style="font-size:0.75rem; font-weight:600; color: #64748b; text-transform:uppercase; letter-spacing:0.05em; display: flex; align-items: center; gap: 4px;">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
-                            {{ $tableLabel }}
-                        </div>
-                    </div>
+.noscrollbar::-webkit-scrollbar { display: none; }
+.noscrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+</style>
 
-                    <div style="text-align:right; background:#ffffff; border: 1px solid #e2e8f0; border-radius:0.75rem; padding:0.5rem 0.75rem; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
-                        <div style="font-size:0.65rem; font-weight:700; color: #94a3b8; text-transform:uppercase; letter-spacing:0.05em;">Elapsed</div>
-                        <div style="font-size:1.1rem; font-weight:800; color: {{ $isUrgent ? '#dc2626' : '#1e293b' }};">
-                            {{ $order->elapsed }}
-                        </div>
-                    </div>
-                </div>
+@php
+    $orders   = $this->getOrders();
+    $pending  = $orders->where('status', 'pending');
+    $cooking  = $orders->where('status', 'cooking');
+    $ready    = $orders->where('status', 'ready');
+@endphp
 
-                {{-- ── ITEMS ───────────────────────────────────────────── --}}
-                <div class="noscrollbar"
-                     style="flex:1; overflow-y:auto; padding:1.25rem;">
-                    <ul style="display:flex; flex-direction:column; gap:0.75rem; margin:0; padding:0; list-style:none;">
-                        @foreach($order->items as $item)
-                            <li class="kds-item-row" style="display:flex; align-items:center; gap:0.85rem;
-                                       border-radius:0.75rem; padding:0.75rem 1rem;">
-                                <span style="width:32px; height:32px; border-radius:8px;
-                                             background: {{ $accentColor }};
-                                             display:flex; align-items:center; justify-content:center;
-                                             font-size:0.9rem; font-weight:800; color:#fff; flex-shrink:0;">
-                                    {{ (int)$item->quantity }}
-                                </span>
-                                <div style="flex:1; min-width:0;">
-                                    <p style="margin:0; font-weight:600; font-size:0.95rem; color:#334155;
-                                              white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
-                                        {{ $item->product?->name }}
-                                    </p>
-                                    @if($item->notes)
-                                        <p style="margin:0.25rem 0 0; font-size:0.75rem; color:#64748b; font-style:italic;">
-                                            {{ $item->notes }}
-                                        </p>
-                                    @endif
-                                </div>
-                            </li>
-                        @endforeach
-                    </ul>
+<div class="kds-root" wire:poll.8s>
 
-                    @if($order->notes)
-                        <div style="margin-top:1rem; padding:0.75rem 1rem; background: #fffbeb;
-                                    border-left:4px solid #f59e0b; border-radius: 4px; border-top-right-radius: 12px; border-bottom-right-radius: 12px;">
-                            <p style="margin:0; font-size:0.8rem; color:#92400e; font-weight: 500;">
-                                📝 <span style="margin-left: 4px;">{{ $order->notes }}</span>
-                            </p>
-                        </div>
-                    @endif
-                </div>
-
-                {{-- ── ACTION BUTTON ───────────────────────────────────── --}}
-                <div style="padding:1rem 1.25rem; border-top:1px solid #f1f5f9; background:#fafafa;">
-                    @if($isPending)
-                        <button wire:click="updateStatus({{ $order->id }}, 'cooking')"
-                                style="width:100%; padding:0.85rem 1rem;
-                                       background:#d97706;
-                                       color:#fff; font-weight:700; font-size:0.8rem;
-                                       text-transform:uppercase; letter-spacing:0.05em;
-                                       border:none; border-radius:0.75rem; cursor:pointer;
-                                       display:flex; align-items:center; justify-content:center; gap:0.6rem;
-                                       transition: all 0.2s; box-shadow:0 4px 12px rgba(217,119,6,0.2);"
-                                onmouseover="this.style.background='#b45309'; this.style.transform='translateY(-1px)'"
-                                onmouseout="this.style.background='#d97706'; this.style.transform='translateY(0)'">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 18.657A8 8 0 016.343 7.343S7 9 9 10c0-2 .5-5 2.986-7C14 5 16.09 5.777 17.657 7.343A7.975 7.975 0 0120 13a7.975 7.975 0 01-2.343 5.657z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.879 16.121A3 3 0 1012.015 11L11 14l-0.655 0.655a3 3 0 01-0.466 0.466z"></path></svg>
-                            Fire Order
-                        </button>
-                    @elseif($isCooking)
-                        <button wire:click="updateStatus({{ $order->id }}, 'ready')"
-                                style="width:100%; padding:0.85rem 1rem;
-                                       background:#16a34a;
-                                       color:#fff; font-weight:700; font-size:0.8rem;
-                                       text-transform:uppercase; letter-spacing:0.05em;
-                                       border:none; border-radius:0.75rem; cursor:pointer;
-                                       display:flex; align-items:center; justify-content:center; gap:0.6rem;
-                                       transition: all 0.2s; box-shadow:0 4px 12px rgba(22,163,74,0.2);"
-                                onmouseover="this.style.background='#15803d'; this.style.transform='translateY(-1px)'"
-                                onmouseout="this.style.background='#16a34a'; this.style.transform='translateY(0)'">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
-                            Plated &amp; Ready
-                        </button>
-                    @else
-                        <button wire:click="updateStatus({{ $order->id }}, 'served')"
-                                style="width:100%; padding:0.85rem 1rem;
-                                       background:#f8fafc;
-                                       color:#64748b; font-weight:700; font-size:0.8rem;
-                                       text-transform:uppercase; letter-spacing:0.05em;
-                                       border:1px solid #e2e8f0; border-radius:0.75rem; cursor:pointer;
-                                       display:flex; align-items:center; justify-content:center; gap:0.6rem;
-                                       transition: all 0.2s;"
-                                onmouseover="this.style.background='#f1f5f9'; this.style.color='#475569'"
-                                onmouseout="this.style.background='#f8fafc'; this.style.color='#64748b'">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg>
-                            Bump Order
-                        </button>
-                    @endif
+    {{-- ── Stats Bar ─────────────────────────────────────────── --}}
+    <div class="kds-stats-bar">
+        <div style="display:flex; gap:1.5rem; align-items:center;">
+            <div class="kds-stat-chip">
+                <div class="kds-stat-dot" style="background:#ef4444;"></div>
+                <div>
+                    <div class="kds-stat-val" style="color:#ef4444;">{{ $pending->count() }}</div>
+                    <div style="font-size:.65rem; color:#64748b; text-transform:uppercase; letter-spacing:.06em;">New</div>
                 </div>
             </div>
-        @empty
-            <div style="grid-column:1/-1; min-height:400px; display:flex; flex-direction:column;
-                         align-items:center; justify-content:center; text-align:center;
-                         background:#ffffff; border:1px dashed #cbd5e1;
-                         border-radius:1.5rem; padding:3rem;">
-                <div style="width:80px; height:80px; background:#f1f5f9;
-                             border-radius:50%; display:flex; align-items:center; justify-content:center;
-                             font-size:2.5rem; margin-bottom:1.5rem;">
-                    🍽️
+            <div style="width:1px; height:28px; background:#e2e8f0;"></div>
+            <div class="kds-stat-chip">
+                <div class="kds-stat-dot" style="background:#f59e0b;"></div>
+                <div>
+                    <div class="kds-stat-val" style="color:#f59e0b;">{{ $cooking->count() }}</div>
+                    <div style="font-size:.65rem; color:#64748b; text-transform:uppercase; letter-spacing:.06em;">Cooking</div>
                 </div>
-                <h3 style="color:#1e293b; font-size:1.5rem; font-weight:800; margin:0 0 0.5rem;">
-                    Kitchen is Clear!
-                </h3>
-                <p style="color:#64748b; font-size:1rem; margin:0; max-width:320px; line-height:1.6;">
-                    No active orders at the moment. Take a short break!
-                </p>
             </div>
-        @endforelse
+            <div style="width:1px; height:28px; background:#e2e8f0;"></div>
+            <div class="kds-stat-chip">
+                <div class="kds-stat-dot" style="background:#22c55e;"></div>
+                <div>
+                    <div class="kds-stat-val" style="color:#22c55e;">{{ $ready->count() }}</div>
+                    <div style="font-size:.65rem; color:#64748b; text-transform:uppercase; letter-spacing:.06em;">Ready</div>
+                </div>
+            </div>
+            <div style="width:1px; height:28px; background:#e2e8f0;"></div>
+            <div class="kds-stat-chip">
+                <div class="kds-stat-dot" style="background:#6366f1;"></div>
+                <div>
+                    <div class="kds-stat-val" style="color:#1e293b;">{{ $orders->count() }}</div>
+                    <div style="font-size:.65rem; color:#64748b; text-transform:uppercase; letter-spacing:.06em;">Total</div>
+                </div>
+            </div>
+        </div>
+        <div style="display:flex; align-items:center; gap:1.5rem;">
+            <div class="kds-live">
+                <div class="kds-live-dot"></div>
+                Auto-refresh 8s
+            </div>
+            <div style="font-size:1.1rem; font-weight:800; color:#94a3b8; font-variant-numeric:tabular-nums;"
+                 x-data="{t:''}" x-init="setInterval(()=>t=new Date().toLocaleTimeString(),1000)" x-text="t">
+            </div>
+        </div>
     </div>
 
-    <script>
-        document.addEventListener('livewire:navigated', () => {
-            let lastCount = {{ count($this->getOrders()) }};
+    {{-- ── Three Columns ──────────────────────────────────────── --}}
+    <div class="kds-columns">
+
+        {{-- PENDING column --}}
+        <div>
+            <div class="kds-col-header" style="background:#fef2f2; border-color:#fecaca;">
+                <div class="kds-col-title" style="color:#dc2626;">⏱ New Orders</div>
+                <div class="kds-count-badge" style="background:#ef4444; color:#fff;">{{ $pending->count() }}</div>
+            </div>
+            @forelse($pending as $order)
+                @php $isUrgent = $order->elapsed_minutes >= 15; @endphp
+                <div class="kds-card {{ $isUrgent ? 'kds-urgent' : '' }}"
+                     style="border-color:{{ $isUrgent ? '#ef4444' : '#fecaca' }};"
+                     x-data="{show:false}" x-init="setTimeout(()=>show=true,50)"
+                     x-show="show"
+                     x-transition:enter="transition ease-out duration-300"
+                     x-transition:enter-start="opacity-0 scale-95"
+                     x-transition:enter-end="opacity-100 scale-100">
+
+                    <div class="kds-card-header" style="background:#fef2f2; border-color:#fecaca;">
+                        <div>
+                            <div class="kds-order-num" style="color:#dc2626;">#{{ str_pad($order->id,4,'0',STR_PAD_LEFT) }}</div>
+                            <div class="kds-table-label" style="color:#ef4444;">
+                                <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7h18M3 12h18M3 17h18"/></svg>
+                                {{ $order->table?->name ?? 'Walk-in' }}
+                            </div>
+                        </div>
+                        <div class="kds-timer">
+                            <div class="kds-timer-val" style="color:{{ $isUrgent ? '#dc2626' : '#1e293b' }};">{{ $order->elapsed }}</div>
+                        </div>
+                    </div>
+
+                    <div class="kds-items">
+                        @foreach($order->items as $item)
+                        <div class="kds-item">
+                            <div class="kds-qty" style="background:#fee2e2; color:#dc2626;">{{ (int)$item->quantity }}</div>
+                            <div class="kds-item-name" style="color:#1e293b;">{{ $item->product?->name }}</div>
+                        </div>
+                        @endforeach
+                    </div>
+                    @if($order->notes)
+                    <div class="kds-notes-bar">📝 {{ $order->notes }}</div>
+                    @endif
+
+                    <button wire:click="updateStatus({{ $order->id }}, 'cooking')"
+                            class="kds-action-btn"
+                            style="background:#d97706; color:#fff;">
+                        <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M17.657 18.657A8 8 0 016.343 7.343S7 9 9 10c0-2 .5-5 2.986-7C14 5 16.09 5.777 17.657 7.343A7.975 7.975 0 0120 13a7.975 7.975 0 01-2.343 5.657z"/></svg>
+                        🔥 Start Cooking
+                    </button>
+                </div>
+            @empty
+                <div class="kds-empty">🎉<br>No new orders</div>
+            @endforelse
+        </div>
+
+        {{-- COOKING column --}}
+        <div>
+            <div class="kds-col-header" style="background:#fffbeb; border-color:#fde68a;">
+                <div class="kds-col-title" style="color:#d97706;">👨‍🍳 In Kitchen</div>
+                <div class="kds-count-badge" style="background:#f59e0b; color:#fff;">{{ $cooking->count() }}</div>
+            </div>
+            @forelse($cooking as $order)
+                <div class="kds-card" style="border-color:#fde68a;"
+                     x-data="{show:false}" x-init="setTimeout(()=>show=true,50)"
+                     x-show="show"
+                     x-transition:enter="transition ease-out duration-300"
+                     x-transition:enter-start="opacity-0 scale-95"
+                     x-transition:enter-end="opacity-100 scale-100">
+
+                    <div class="kds-card-header" style="background:#fffbeb; border-color:#fde68a;">
+                        <div>
+                            <div class="kds-order-num" style="color:#d97706;">#{{ str_pad($order->id,4,'0',STR_PAD_LEFT) }}</div>
+                            <div class="kds-table-label" style="color:#f59e0b;">
+                                <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7h18M3 12h18M3 17h18"/></svg>
+                                {{ $order->table?->name ?? 'Walk-in' }}
+                            </div>
+                        </div>
+                        <div class="kds-timer">
+                            <div class="kds-timer-val" style="color:#d97706;">{{ $order->elapsed }}</div>
+                        </div>
+                    </div>
+
+                    <div class="kds-items">
+                        @foreach($order->items as $item)
+                        <div class="kds-item">
+                            <div class="kds-qty" style="background:#fef3c7; color:#d97706;">{{ (int)$item->quantity }}</div>
+                            <div class="kds-item-name" style="color:#1e293b;">{{ $item->product?->name }}</div>
+                        </div>
+                        @endforeach
+                    </div>
+                    @if($order->notes)
+                    <div class="kds-notes-bar">📝 {{ $order->notes }}</div>
+                    @endif
+
+                    <button wire:click="updateStatus({{ $order->id }}, 'ready')"
+                            class="kds-action-btn"
+                            style="background:#16a34a; color:#fff;">
+                        <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+                        ✅ Mark Ready
+                    </button>
+                </div>
+            @empty
+                <div class="kds-empty">🍳<br>Nothing cooking</div>
+            @endforelse
+        </div>
+
+        {{-- READY column --}}
+        <div>
+            <div class="kds-col-header" style="background:#f0fdf4; border-color:#bbf7d0;">
+                <div class="kds-col-title" style="color:#16a34a;">✅ Ready to Serve</div>
+                <div class="kds-count-badge" style="background:#22c55e; color:#fff;">{{ $ready->count() }}</div>
+            </div>
+            @forelse($ready as $order)
+                <div class="kds-card" style="border-color:#bbf7d0;"
+                     x-data="{show:false}" x-init="setTimeout(()=>show=true,50)"
+                     x-show="show"
+                     x-transition:enter="transition ease-out duration-300"
+                     x-transition:enter-start="opacity-0 scale-95"
+                     x-transition:enter-end="opacity-100 scale-100">
+
+                    <div class="kds-card-header" style="background:#f0fdf4; border-color:#bbf7d0;">
+                        <div>
+                            <div class="kds-order-num" style="color:#16a34a;">#{{ str_pad($order->id,4,'0',STR_PAD_LEFT) }}</div>
+                            <div class="kds-table-label" style="color:#22c55e;">
+                                <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7h18M3 12h18M3 17h18"/></svg>
+                                {{ $order->table?->name ?? 'Walk-in' }}
+                            </div>
+                        </div>
+                        <div class="kds-timer">
+                            <div class="kds-timer-val" style="color:#16a34a;">{{ $order->elapsed }}</div>
+                        </div>
+                    </div>
+
+                    <div class="kds-items">
+                        @foreach($order->items as $item)
+                        <div class="kds-item">
+                            <div class="kds-qty" style="background:#dcfce7; color:#16a34a;">{{ (int)$item->quantity }}</div>
+                            <div class="kds-item-name" style="color:#1e293b;">{{ $item->product?->name }}</div>
+                        </div>
+                        @endforeach
+                    </div>
+                    @if($order->notes)
+                    <div class="kds-notes-bar">📝 {{ $order->notes }}</div>
+                    @endif
+
+                    <button wire:click="updateStatus({{ $order->id }}, 'served')"
+                            class="kds-action-btn"
+                            style="background:#f1f5f9; color:#64748b;">
+                        <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
+                        Bump / Served
+                    </button>
+                </div>
+            @empty
+                <div class="kds-empty">🏁<br>Nothing ready yet</div>
+            @endforelse
+        </div>
+
+    </div>{{-- end kds-columns --}}
+
+    {{-- All clear --}}
+    @if($orders->isEmpty())
+    <div style="display:flex; flex-direction:column; align-items:center; justify-content:center;
+                min-height:50vh; text-align:center; gap:1rem;">
+        <div style="font-size:4rem;">🍽️</div>
+        <h2 style="color:#1e293b; font-size:1.75rem; font-weight:900; margin:0;">Kitchen is Clear!</h2>
+        <p style="color:#64748b; font-size:1rem; margin:0;">No active orders. Enjoy the calm before the storm!</p>
+    </div>
+    @endif
+
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    let lastCount = {{ $orders->count() }};
+    document.addEventListener('livewire:update', () => {
+        const current = document.querySelectorAll('.kds-card').length;
+        if (current > lastCount) {
             const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
-            setInterval(() => {
-                const currentCount = document.querySelectorAll('#kds-board > div:not([style*="grid-column"])').length;
-                if (currentCount > lastCount) {
-                    audio.play().catch(() => {});
-                }
-                lastCount = currentCount;
-            }, 8000);
-        });
-    </script>
+            audio.volume = 0.5;
+            audio.play().catch(() => {});
+        }
+        lastCount = current;
+    });
+});
+</script>
 
 </x-filament-panels::page>

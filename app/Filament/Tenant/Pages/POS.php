@@ -13,7 +13,9 @@ class POS extends Page
 {
     protected static ?string $navigationIcon = 'heroicon-o-shopping-cart';
 
-    protected static string $view = 'filament.tenant.pages.p-o-s';
+    protected static ?string $slug = 'pos';
+
+    protected static string $view = 'filament.tenant.pages.pos';
 
     protected static ?string $title = 'Point of Sale';
 
@@ -21,10 +23,15 @@ class POS extends Page
     public $selectedCategoryId = null;
     public $cart = [];
     public $tableId = null;
+    public $customerId = null;
+    public $discount = 0;
+    public $taxRate = 0;
+    public $amountPaid = 0;
 
     public function mount()
     {
         $this->cart = [];
+        $this->taxRate = (float) \App\Models\Setting::get('tax_rate', 5);
     }
 
     protected function getForms(): array
@@ -48,6 +55,11 @@ class POS extends Page
     public function getTablesProperty()
     {
         return Table::all();
+    }
+
+    public function getCustomersProperty()
+    {
+        return \App\Models\Customer::all();
     }
 
     public function addToCart($productId)
@@ -85,9 +97,27 @@ class POS extends Page
         }
     }
 
-    public function getTotalProperty()
+    public function getSubtotalProperty()
     {
         return collect($this->cart)->sum('subtotal');
+    }
+
+    public function getTaxAmountProperty()
+    {
+        return ($this->subtotal - $this->discount) * ($this->taxRate / 100);
+    }
+
+    public function getTotalProperty()
+    {
+        $total = ($this->subtotal - $this->discount) + $this->taxAmount;
+        return max(0, $total);
+    }
+
+    public function clearCart()
+    {
+        $this->cart = [];
+        $this->discount = 0;
+        $this->amountPaid = 0;
     }
 
     public function checkout()
@@ -99,9 +129,13 @@ class POS extends Page
 
         $order = Order::create([
             'table_id' => $this->tableId,
+            'customer_id' => $this->customerId,
+            'subtotal' => $this->subtotal,
             'total_price' => $this->total,
+            'discount_amount' => $this->discount,
+            'vat_amount' => $this->taxAmount,
             'status' => 'pending',
-            'payment_status' => 'unpaid',
+            'payment_status' => $this->amountPaid >= $this->total ? 'paid' : 'unpaid',
         ]);
 
         foreach ($this->cart as $item) {
@@ -113,8 +147,9 @@ class POS extends Page
             ]);
         }
 
-        $this->cart = [];
+        $this->clearCart();
         $this->tableId = null;
+        $this->customerId = null;
 
         Notification::make()
             ->title('Order Created Successfully')

@@ -16,4 +16,12 @@ class ListProducts extends ListRecords
             Actions\CreateAction::make(),
         ];
     }
+
+    public function toggleVariantField($variantId, $field)
+    {
+        $variant = \App\Models\ProductVariant::find($variantId);
+        if ($variant && in_array($field, ['is_active', 'is_stock_validate'])) {
+            $variant->update([$field => !$variant->$field]);
+        }
+    }
 }
