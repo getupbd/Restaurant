@@ -6,6 +6,7 @@ use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
 use Filament\Http\Middleware\DispatchServingFilamentEvent;
+use Filament\Navigation\NavigationItem;
 use Filament\Pages;
 use Filament\Panel;
 use Filament\PanelProvider;
@@ -30,7 +31,7 @@ class TenantPanelProvider extends PanelProvider
             ->brandName('Antigravity Restaurant')
             ->colors([
                 'primary' => Color::Indigo,
-                'gray' => Color::Slate,
+                'gray'    => Color::Slate,
             ])
             ->discoverResources(in: app_path('Filament/Tenant/Resources'), for: 'App\\Filament\\Tenant\\Resources')
             ->discoverPages(in: app_path('Filament/Tenant/Pages'), for: 'App\\Filament\\Tenant\\Pages')
@@ -41,6 +42,23 @@ class TenantPanelProvider extends PanelProvider
             ->widgets([
                 Widgets\AccountWidget::class,
                 Widgets\FilamentInfoWidget::class,
+            ])
+            ->navigationItems([
+                NavigationItem::make('Pending Orders')
+                    ->url(fn() => route('filament.tenant.resources.orders.pending'))
+                    ->icon('heroicon-o-clock')
+                    ->group('Order Management')
+                    ->sort(4),
+                NavigationItem::make('Completed Orders')
+                    ->url(fn() => route('filament.tenant.resources.orders.complete'))
+                    ->icon('heroicon-o-check-badge')
+                    ->group('Order Management')
+                    ->sort(5),
+                NavigationItem::make('Cancelled Orders')
+                    ->url(fn() => route('filament.tenant.resources.orders.cancelled'))
+                    ->icon('heroicon-o-x-circle')
+                    ->group('Order Management')
+                    ->sort(6),
             ])
             ->middleware([
                 \Stancl\Tenancy\Middleware\InitializeTenancyByDomain::class,

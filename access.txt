@@ -1,0 +1,5 @@
+http://127.0.0.1:8001/super-admin
+Login: admin@admin.com / password
+
+http://bdt-restaurant.localhost:8001/admin
+Login: admin@bdt-restaurant.com / password
